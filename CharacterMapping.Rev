@@ -1,0 +1,112 @@
+#load data
+trait <- readDiscreteCharacterData("NexusData/"+args[1]+".nex")
+trait_exp = trait.expandCharacters( 2 )
+
+phylogeny <- readTrees("SpeciesTree.nk")[1]
+
+#helper variables
+moves = VectorMoves()
+monitors = VectorMonitors()
+
+#initiate rate matrix
+for (i in 1:4) {
+  for (j in 1:4) {
+    rates[i][j] <- 0.0
+  }
+}
+
+#hyper priors
+rate_pr := phylogeny.treeLength() / 100
+SD_PRIOR <- 1/0.587405
+
+#gains
+#prior distributions
+rate_gain_median ~ dnExponential( rate_pr )
+rate_gain_sd ~ dnExponential( SD_PRIOR )
+
+#scaling moves
+moves.append( mvScale( rate_gain_median, weight=2 ) )
+moves.append( mvScale( rate_gain_sd, weight=2 ) )
+
+#two median quantiles for each hidden state  
+rate_gain := fnDiscretizeDistribution( dnLognormal( ln(rate_gain_median), rate_gain_sd ), 2 )
+
+#losses
+#prior distributions
+rate_loss_median ~ dnExponential( rate_pr )
+rate_loss_sd ~ dnExponential( SD_PRIOR )
+
+#scaling moves
+moves.append( mvScale( rate_loss_median, weight=2 ) )
+moves.append( mvScale( rate_loss_sd, weight=2 ) )
+
+#two median quantiles for each hidden rate category 
+rate_loss := fnDiscretizeDistribution( dnLognormal( ln(rate_loss_median), rate_loss_sd ), 2 )
+
+#rate variables for switching between hidden states
+switch_slow_fast ~ dnExponential( rate_pr )
+switch_fast_slow ~ dnExponential( rate_pr )
+
+#scaling moves
+moves.append( mvScale( switch_slow_fast, weight=2 ) )
+moves.append( mvScale( switch_fast_slow, weight=2 ) )
+
+#connect rate variables to matrix
+rates[1][2] := rate_gain[1]     # 0S->1S
+rates[1][3] := switch_slow_fast # 0S->0F
+rates[2][1] := rate_loss[1]     # 1S->0S
+rates[2][4] := switch_slow_fast # 1S->1F
+rates[3][1] := switch_fast_slow # 0F->0S
+rates[3][4] := rate_gain[2]     # 0F->1F
+rates[4][2] := switch_fast_slow # 1F->1S
+rates[4][3] := rate_loss[2]     # 1F->2F
+
+#transition matrix
+Q_trait := fnFreeK(rates, rescaled=FALSE)
+
+#root frequency prior (flat distribution)
+rf ~ dnDirichlet( rep(1,2*2) )
+
+#moves for the root frequencies
+moves.append( mvBetaSimplex( rf, weight=2 ) )
+moves.append( mvDirichletSimplex( rf, weight=2 ) )
+
+#markov chain
+phytrait ~ dnPhyloCTMC(tree=phylogeny, Q=Q_trait, rootFrequencies=rf, type="NaturalNumbers")
+phytrait.clamp(trait_exp)
+
+#create model
+mymodel = model(phylogeny)
+
+#full model monitor
+monitors.append( mnModel(filename="Logs/"+args[1]+".log", printgen=1) )
+#print to screen
+monitors.append( mnScreen(printgen=10) )
+#ancestral state monitor
+
+#stochastic character map monitor
+monitors.append( mnStochasticCharacterMap(ctmc=phytrait,
+                                          filename="Logs/"+args[1]+"_CharacterMap.log",
+                                          printgen=10,
+                                          include_simmap=true) )
+#MCMC
+mymcmc = mcmc(mymodel, monitors, moves, nruns=2, combine="mixed")
+mymcmc.run(generations=10000, tuningInterval=200)
+
+#ancestral state trace
+anc_states_stoch_map = readAncestralStateTrace("Logs/"+args[1]+"_CharacterMap.log")
+
+
+#make simmaps
+char_map_tree = characterMapTree(tree=phylogeny,
+                 ancestral_state_trace_vector=anc_states_stoch_map,
+                 character_file="SIMMAPS/MAPs/"+args[1]+".tree",
+                 posterior_file="SIMMAPS/PosteriorProbs/"+args[1]+".tree",
+                 burnin=0.1,
+                 num_time_slices=500)
+                 
+q()
+
+
+
+
