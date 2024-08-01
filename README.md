@@ -1,9 +1,8 @@
 # YeastConvergence2024
 
-#### Scripts to replicate unpublished yeast manuscript
+#### Scripts to replicate unpublished manuscript
 
-- `filter_coordinates.r` Collect species occurrence records and apply filtering steps 
+- `filter_coordinates.r` Assemble data and run modified phylogenetic logistic regression 
 
-- `distribution_modeling.r` Generate species distribution models 
+- `CharacterMapping.Rev` Create stochastic character maps of every metabolic trait
 
-- `primary_analyses.r` Run models and generate summary statistics for all major analyses
