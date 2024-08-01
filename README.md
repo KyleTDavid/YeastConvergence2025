@@ -4,5 +4,5 @@
 
 - `filter_coordinates.r` Assemble data and run modified phylogenetic logistic regression 
 
-- `CharacterMapping.Rev` Create stochastic character maps of every metabolic trait
+- `CharacterMapping.Rev` Create stochastic character maps for every metabolic trait
 
