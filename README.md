@@ -1,8 +1,8 @@
-# YeastConvergence2024
+# YeastConvergence2025
 
-#### Scripts to replicate unpublished manuscript "Convergent expansions of keystone gene families drive metabolic innovation in a major eukaryotic clade"
+#### Scripts to replicate unpublished manuscript "Convergent expansions of keystone gene families drive metabolic innovation in Saccharomycotina yeasts"
 
-- `filter_coordinates.r` Assemble data and run modified phylogenetic logistic regression 
+- `PhyloLogR.R` Assemble data and run modified phylogenetic logistic regression 
 
 - `CharacterMapping.Rev` Create stochastic character maps for every metabolic trait
 
